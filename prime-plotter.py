@@ -48,8 +48,11 @@ def refresh_graph():
     plt.ylabel('Gap with previous prime')
     title_string = f'Prime: {previous_prime or "-"}, Gap note: {prime_gap or "-"} x {NOTE_BASE_FREQUENCY} Hz'
     ax1.set_title(title_string, c = 'white')
-    #ax1.plot(xs, ys, c = 'orange', linewidth=0.75)
-    ax1.scatter(xs, ys, c = 'lime', s=2)
+#    ax1.plot(xs, ys, c = 'orange', linewidth=0.75)
+    ax1.bar(xs, ys, color = 'orange', width=0.2)
+#    ax1.bar(xs, ys, color = 'orange')
+#    ax1.set_xbound(-1.0, 50)
+    #ax1.scatter(xs, ys, c = 'lime', s=2)
 
 def play_note(note):
     samples = (np.sin(2*np.pi*np.arange(sample_rate*NOTE_DURATION)*note*NOTE_BASE_FREQUENCY/sample_rate)).astype(np.float32)
@@ -109,7 +112,7 @@ def plot_with_mode(i, mode, limit, animate_flag):
             core_function(i, mode)
 
     refresh_graph()
-    plt.show()
+    #plt.show()
 
 def main():
 
