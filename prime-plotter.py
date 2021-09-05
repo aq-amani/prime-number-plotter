@@ -5,6 +5,7 @@ import numpy as np
 import pyaudio
 import argparse
 
+## TODO: Cleanup this part
 # Parameters to tune
 NOTE_VOLUME = 0.5     # range [0.0, 1.0]
 NOTE_DURATION = 0.4   # in seconds, may be float
@@ -43,6 +44,7 @@ def refresh_graph():
     ax1.tick_params(axis='x', colors='white')
     ax1.tick_params(axis='y', colors='white')
     plt.xlabel('Number')
+    ## TODO: Change Y label based on mode
     plt.ylabel('Gap with previous prime')
     title_string = f'Prime: {previous_prime or "-"}, Gap note: {prime_gap or "-"} x {NOTE_BASE_FREQUENCY} Hz'
     ax1.set_title(title_string, c = 'white')
@@ -130,6 +132,7 @@ def main():
     refresh_graph()
     if music_flag:
         print('Musical notes turned on')
+        ##TODO: Implement
 
     if animate_flag:
         ani = animation.FuncAnimation(fig, plot_with_mode, interval=GRAPH_ANIMATION_INTERVAL, fargs=(mode,limit,animate_flag))
