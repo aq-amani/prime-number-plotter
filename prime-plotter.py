@@ -12,13 +12,10 @@ NOTE_DURATION = 0.4   # in seconds, may be float
 NOTE_BASE_FREQUENCY = 190
 GRAPH_ANIMATION_INTERVAL = 20
 
-#p = pyaudio.PyAudio()
-
+SOUND_FLAG = False
+p = 0
+audio_stream = 0
 sample_rate = 44100       # sampling rate, Hz, must be integer
-#audio_stream = p.open(format=pyaudio.paFloat32,
-#                channels=1,
-#                rate=sample_rate,
-#                output=True)
 
 xs = []
 ys = []
@@ -99,6 +96,8 @@ def core_function(i, mode):
         xs.append(float(i))
         ys.append(float(y))
         print(f'i: {i} prime gap: {prime_gap}, previous_prime: {previous_prime}')
+        if SOUND_FLAG:
+            play_note(y)
         previous_prime = i
 
 def plot_with_mode(i, mode, limit, animate_flag):
@@ -112,9 +111,22 @@ def plot_with_mode(i, mode, limit, animate_flag):
             core_function(i, mode)
 
     refresh_graph()
-    #plt.show()
+
+def init_sound():
+    global p
+    global audio_stream
+    p = pyaudio.PyAudio()
+
+    audio_stream = p.open(format=pyaudio.paFloat32,
+                    channels=1,
+                    rate=sample_rate,
+                    output=True)
+def close_sound():
+    audio_stream.close()
+    p.terminate()
 
 def main():
+    global SOUND_FLAG
 
     parser = argparse.ArgumentParser(description='prime-plotter.py: A script to represent some properties of prime numbers visually and audibly')
 
@@ -130,21 +142,23 @@ def main():
     mode = args['mode']
     limit = args['limit']
     animate_flag = args['animate']
-    music_flag = args['sound']
-    print(f'Running in [{mode}] mode with [{limit}] as the upper limit. Animation: [{"ON" if animate_flag else "OFF"}], Sound: [{"ON" if music_flag else "OFF"}]')
+    SOUND_FLAG = args['sound']
+    print(f'Running in [{mode}] mode with [{limit}] as the upper limit. Animation: [{"ON" if animate_flag else "OFF"}], Sound: [{"ON" if SOUND_FLAG else "OFF"}]')
     refresh_graph()
-    if music_flag:
+    if SOUND_FLAG:
         print('Musical notes turned on')
-        ##TODO: Implement
+        init_sound()
 
     if animate_flag:
         ani = animation.FuncAnimation(fig, plot_with_mode, interval=GRAPH_ANIMATION_INTERVAL, fargs=(mode,limit,animate_flag))
         plt.show()
     else:
+        #pass
         plot_with_mode('', mode, limit, animate_flag)
+        plt.show()
 
-    #audio_stream.close()
-    #p.terminate()
+    if SOUND_FLAG:
+        close_sound()
 
 
 if __name__ == "__main__":
