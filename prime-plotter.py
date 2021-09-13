@@ -74,7 +74,10 @@ def core_function(i, mode):
         prime_gap = i - previous_prime # Delta between consecutive primes
         if mode == 'prime-gap':
             y = prime_gap
+            xs.append(float(i))
+            ys.append(float(y))
         elif 'maxgap' in mode:
+            y = 1
             if prime_gap > previous_max_gap:
                 #this prime_gap is max so far
                 print(f'i: {i} prime gap: {prime_gap}, new max gap. previous_max_gap: {previous_max_gap}')
@@ -88,13 +91,15 @@ def core_function(i, mode):
                     y = i / previous_prime # ratio of prime to prime(x) who are max gaps
                 if mode == 'ratio-of-maxgap-to-interval':
                     y = prime_gap / i
+                xs.append(float(i))
+                ys.append(float(y))
 
                 #y = i % previous_prime
                 #y = prime_gap - previous_max_gap # Delta of max gap to max gap (y)
                 print(f'Y is {y}')
                 previous_max_gap = prime_gap
-        xs.append(float(i))
-        ys.append(float(y))
+        #xs.append(float(i))
+        #ys.append(float(y))
         print(f'i: {i} prime gap: {prime_gap}, previous_prime: {previous_prime}')
         if SOUND_FLAG:
             play_note(y)
