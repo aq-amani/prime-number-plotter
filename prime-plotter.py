@@ -10,7 +10,10 @@ import argparse
 NOTE_VOLUME = 0.5     # range [0.0, 1.0]
 NOTE_DURATION = 0.4   # in seconds, may be float
 NOTE_BASE_FREQUENCY = 190
-GRAPH_ANIMATION_INTERVAL = 20
+GRAPH_ANIMATION_INTERVAL = 10
+Y_LABEL = 'Gap with previous prime'
+f_range_min = 261
+f_range_max  = 2 * 261 # C4 ~ C5
 
 SOUND_FLAG = False
 p = 0
@@ -26,6 +29,7 @@ ax1 = fig.add_subplot(1,1,1)
 
 previous_prime = 1
 previous_max_gap = 1
+previous_maxgap_prime = 1
 prime_gap = 1
 
 def refresh_graph():
@@ -41,18 +45,21 @@ def refresh_graph():
     ax1.tick_params(axis='x', colors='white')
     ax1.tick_params(axis='y', colors='white')
     plt.xlabel('Number')
-    ## TODO: Change Y label based on mode
-    plt.ylabel('Gap with previous prime')
+    plt.ylabel(Y_LABEL)
     title_string = f'Prime: {previous_prime or "-"}, Gap note: {prime_gap or "-"} x {NOTE_BASE_FREQUENCY} Hz'
     ax1.set_title(title_string, c = 'white')
-#    ax1.plot(xs, ys, c = 'orange', linewidth=0.75)
-    ax1.bar(xs, ys, color = 'orange', width=0.2)
+    ax1.plot(xs, ys, c = 'orange', linewidth=0.75)
+    #ax1.bar(xs, ys, color = 'orange', width=0.2)
 #    ax1.bar(xs, ys, color = 'orange')
 #    ax1.set_xbound(-1.0, 50)
-    #ax1.scatter(xs, ys, c = 'lime', s=2)
+#    ax1.scatter(xs, ys, c = 'lime', s=1)
+
+#def play_note(note):
+#    samples = (np.sin(2*np.pi*np.arange(sample_rate*NOTE_DURATION)*note*NOTE_BASE_FREQUENCY/sample_rate)).astype(np.float32)
+#    audio_stream.write(NOTE_VOLUME*samples)
 
 def play_note(note):
-    samples = (np.sin(2*np.pi*np.arange(sample_rate*NOTE_DURATION)*note*NOTE_BASE_FREQUENCY/sample_rate)).astype(np.float32)
+    samples = (np.sin(2*np.pi*np.arange(sample_rate*NOTE_DURATION)*note/sample_rate)).astype(np.float32)
     audio_stream.write(NOTE_VOLUME*samples)
 
 def is_prime(i):
@@ -69,6 +76,7 @@ def core_function(i, mode):
     global previous_prime
     global prime_gap
     global previous_max_gap
+    global previous_maxgap_prime
 
     if is_prime(i):
         prime_gap = i - previous_prime # Delta between consecutive primes
@@ -76,6 +84,14 @@ def core_function(i, mode):
             y = prime_gap
             xs.append(float(i))
             ys.append(float(y))
+            if prime_gap > previous_max_gap:
+                print(f'i: {i} prime gap: {prime_gap}, new max gap. previous_max_gap: {previous_max_gap}')
+                previous_max_gap = prime_gap
+            if SOUND_FLAG:
+                half_step_count = int((y/previous_max_gap)*12) if previous_max_gap >= 12 else y
+                multiplier = (2 ** (1/12)) ** half_step_count
+                print(f'i: {i} prime gap: {prime_gap}, previous_max_gap: {previous_max_gap}, half_steps: {half_step_count}')
+                play_note(f_range_min*multiplier)
         elif 'maxgap' in mode:
             y = 1
             if prime_gap > previous_max_gap:
@@ -85,6 +101,8 @@ def core_function(i, mode):
                     y = prime_gap # Just the max gap value
                 if mode == 'gap-of-maxgaps':
                     y = prime_gap - previous_max_gap # Delta of max gap to max gap (y)
+                if mode == 'xgap-of-maxgaps':
+                    y = i - previous_maxgap_prime # Delta of primes at consecutive max gaps (x)
                 if mode == 'ratio-of-maxgaps':
                     y = prime_gap / previous_max_gap # ratio of max gap to max gap (y)
                 if mode == 'ratio-of-primes-at-maxgaps':
@@ -93,16 +111,19 @@ def core_function(i, mode):
                     y = prime_gap / i
                 xs.append(float(i))
                 ys.append(float(y))
+                if SOUND_FLAG:
+                    play_note(y)
 
                 #y = i % previous_prime
                 #y = prime_gap - previous_max_gap # Delta of max gap to max gap (y)
                 print(f'Y is {y}')
                 previous_max_gap = prime_gap
+                previous_maxgap_prime = i
         #xs.append(float(i))
         #ys.append(float(y))
         print(f'i: {i} prime gap: {prime_gap}, previous_prime: {previous_prime}')
-        if SOUND_FLAG:
-            play_note(y)
+        #if SOUND_FLAG:
+        #    play_note(y)
         previous_prime = i
 
 def plot_with_mode(i, mode, limit, animate_flag):
@@ -132,10 +153,11 @@ def close_sound():
 
 def main():
     global SOUND_FLAG
+    global Y_LABEL
 
     parser = argparse.ArgumentParser(description='prime-plotter.py: A script to represent some properties of prime numbers visually and audibly')
 
-    mode_choices = ['prime-gap', 'maxgaps', 'gap-of-maxgaps', 'ratio-of-maxgaps', 'ratio-of-primes-at-maxgaps', 'ratio-of-maxgap-to-interval']
+    mode_choices = ['prime-gap', 'maxgaps', 'gap-of-maxgaps', 'xgap-of-maxgaps', 'ratio-of-maxgaps', 'ratio-of-primes-at-maxgaps', 'ratio-of-maxgap-to-interval']
 
     parser.add_argument('-m','--mode', choices=mode_choices, help='What should the script plot?', default = 'prime-gap', metavar = '')
     parser.add_argument('-l','--limit', help='Number upper limit', default = 100, type = int, metavar = '')
@@ -145,6 +167,7 @@ def main():
     args = vars(parser.parse_args())
 
     mode = args['mode']
+    Y_LABEL = mode
     limit = args['limit']
     animate_flag = args['animate']
     SOUND_FLAG = args['sound']
