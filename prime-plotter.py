@@ -2,9 +2,14 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import style
 import numpy as np
-import pyaudio
 import argparse
+import threading
+import sys
+sys.path.append('./music-theory/')
 
+from note import Note
+import playback as pb
+import mapper as mp
 ## TODO: Cleanup this part
 # Parameters to tune
 NOTE_VOLUME = 0.5     # range [0.0, 1.0]
@@ -15,9 +20,8 @@ Y_LABEL = 'Gap with previous prime'
 f_range_min = 261
 f_range_max  = 2 * 261 # C4 ~ C5
 
-SOUND_FLAG = False
+SOUND_FLAG = True
 p = 0
-audio_stream = 0
 sample_rate = 44100       # sampling rate, Hz, must be integer
 
 xs = []
@@ -31,6 +35,9 @@ previous_prime = 1
 previous_max_gap = 1
 previous_maxgap_prime = 1
 prime_gap = 1
+#NOTENAME = ''
+#MS = 0
+#music_thread = threading.Thread(target=pb.play_note, args=(NOTENAME, MS,))
 
 def refresh_graph():
     # Setup graph colors and text
@@ -58,10 +65,6 @@ def refresh_graph():
 #    samples = (np.sin(2*np.pi*np.arange(sample_rate*NOTE_DURATION)*note*NOTE_BASE_FREQUENCY/sample_rate)).astype(np.float32)
 #    audio_stream.write(NOTE_VOLUME*samples)
 
-def play_note(note):
-    samples = (np.sin(2*np.pi*np.arange(sample_rate*NOTE_DURATION)*note/sample_rate)).astype(np.float32)
-    audio_stream.write(NOTE_VOLUME*samples)
-
 def is_prime(i):
     if i <= 1:
         return False
@@ -77,7 +80,8 @@ def core_function(i, mode):
     global prime_gap
     global previous_max_gap
     global previous_maxgap_prime
-
+    global NOTENAME
+    global MS
     if is_prime(i):
         prime_gap = i - previous_prime # Delta between consecutive primes
         if mode == 'prime-gap':
@@ -88,10 +92,11 @@ def core_function(i, mode):
                 print(f'i: {i} prime gap: {prime_gap}, new max gap. previous_max_gap: {previous_max_gap}')
                 previous_max_gap = prime_gap
             if SOUND_FLAG:
-                half_step_count = int((y/previous_max_gap)*12) if previous_max_gap >= 12 else y
-                multiplier = (2 ** (1/12)) ** half_step_count
-                print(f'i: {i} prime gap: {prime_gap}, previous_max_gap: {previous_max_gap}, half_steps: {half_step_count}')
-                play_note(f_range_min*multiplier)
+                print(f'i: {i} prime gap: {prime_gap}, previous_max_gap: {previous_max_gap}')
+                mapped_notes, map = mp.number_mapper_chromatic([y], 'C', 3, 5)
+                #mapped_notes, map = mp.number_mapper_to_scale(number_list, mapping_type, root_note, start_octave, scale_length)
+                music_thread = threading.Thread(target=pb.play_note, args=(mapped_notes[0], 200,))
+                music_thread.start()
         elif 'maxgap' in mode:
             y = 1
             if prime_gap > previous_max_gap:
@@ -112,7 +117,10 @@ def core_function(i, mode):
                 xs.append(float(i))
                 ys.append(float(y))
                 if SOUND_FLAG:
-                    play_note(y)
+                    mapped_notes, map = mp.number_mapper_chromatic([y], 'C', 3, 5)
+                    #mapped_notes, map = mp.number_mapper_to_scale(number_list, mapping_type, root_note, start_octave, scale_length)
+                    music_thread = threading.Thread(target=pb.play_note, args=(mapped_notes[0], 200,))
+                    music_thread.start()
 
                 #y = i % previous_prime
                 #y = prime_gap - previous_max_gap # Delta of max gap to max gap (y)
@@ -138,22 +146,10 @@ def plot_with_mode(i, mode, limit, animate_flag):
 
     refresh_graph()
 
-def init_sound():
-    global p
-    global audio_stream
-    p = pyaudio.PyAudio()
-
-    audio_stream = p.open(format=pyaudio.paFloat32,
-                    channels=1,
-                    rate=sample_rate,
-                    output=True)
-def close_sound():
-    audio_stream.close()
-    p.terminate()
-
 def main():
     global SOUND_FLAG
     global Y_LABEL
+    pb.MIDI = True
 
     parser = argparse.ArgumentParser(description='prime-plotter.py: A script to represent some properties of prime numbers visually and audibly')
 
@@ -175,18 +171,15 @@ def main():
     refresh_graph()
     if SOUND_FLAG:
         print('Musical notes turned on')
-        init_sound()
 
     if animate_flag:
+        #ani = animation.FuncAnimation(fig, plot_with_mode, interval=GRAPH_ANIMATION_INTERVAL, fargs=(mode,limit,animate_flag), frames=100, repeat = False)
         ani = animation.FuncAnimation(fig, plot_with_mode, interval=GRAPH_ANIMATION_INTERVAL, fargs=(mode,limit,animate_flag))
         plt.show()
     else:
         #pass
         plot_with_mode('', mode, limit, animate_flag)
         plt.show()
-
-    if SOUND_FLAG:
-        close_sound()
 
 
 if __name__ == "__main__":
